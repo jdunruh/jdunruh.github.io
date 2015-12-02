@@ -222,8 +222,10 @@ or using selenium. Of course, there is still a need to have a human check the ap
 user interactions actually work.
 
 The last thing is the rendering. The render function comes in the Object part of the om.next protocal (where other React lifecycle methods also go).
-This is mostly straigt forward.
-#+BEGIN_SRC clojure
+This is mostly straight forward.
+
+#+BEGIN_SRC
+
 (defui Day
   static om/Ident
   (ident [this {:keys [day/by-date]}]
@@ -274,7 +276,8 @@ This is mostly straigt forward.
 
 (def month-header (om/factory Month-header))
 
-#+END_SRC                                                                                                                                                    Here, the interesting parts are the use of om/factory, which creates a factory function needed to actually instantiate the compontents, and
+#+END_SRC
+
 the contents of the #js reader macro. #js allows the introduction of javascript into your clojurescript program. Here the classNames are inserted
 and the click handlers are set up. Note that each click handler calls the mutate functions from above using om/transact!. This creates transactions
 to the application state. If you bring up the console when running the applicaiton program, you can see the transaction IDs in the console each

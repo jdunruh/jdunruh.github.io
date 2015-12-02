@@ -219,62 +219,58 @@ or using selenium. Of course, there is still a need to have a human check the ap
 user interactions actually work.
 
 The last thing is the rendering. The render function comes in the Object part of the om.next protocal (where other React lifecycle methods also go).
-This is mostly straigt forward.
-\\#+BEGIN<sub>SRC</sub> clojure
-(defui Day
-  static om/Ident
-  (ident [this {:keys [day/by-date]}]
-       [:days/by-date by-date])
-  Object
-  (render [this]
-    (let [day (:date (om/props this))
-          color (:color (om/props this))
-          name (:name (om/props this))]
-          (dom/div #js{:className (str "day " color)
+This is mostly straight forward.
 
-           :onMouseDown
-               (fn [e]
-                  (om/transact! reconciler \`[(day/change-state {:date ~(date-key day)})]))}
-(dom/div #js {:className "day-no"} (t/day day))
-(dom/span #js {:className "day-name"} name)))))
+    (defui Day
+      static om/Ident
+      (ident [this {:keys [day/by-date]}]
+           [:days/by-date by-date])
+      Object
+      (render [this]
+        (let [day (:date (om/props this))
+              color (:color (om/props this))
+              name (:name (om/props this))]
+              (dom/div #js{:className (str "day " color)
+                           :onMouseDown
+                               (fn [e]
+                                  (om/transact! reconciler `[(day/change-state {:date ~(date-key day)})]))}
+                (dom/div #js {:className "day-no"} (t/day day))
+                (dom/span #js {:className "day-name"} name)))))
 
-(def day (om/factory Day {:keyfn :days/by-date}))
+    (def day (om/factory Day {:keyfn :days/by-date}))
 
-(defui Week
-  Object
-  (render [this]
-     (apply dom/div #js {:className "week"}
-         (map day (om/props this)))))
+    (defui Week
+      Object
+      (render [this]
+         (apply dom/div #js {:className "week"}
+             (map day (om/props this)))))
 
-(def week (om/factory Week {:keyfn #(:days/by-date (first %))}))
+    (def week (om/factory Week {:keyfn #(:days/by-date (first %))}))
 
-(defui Month-header
-   static om/IQuery
-  (query [this]
-     '[:month/month-id])
-   static om/Ident
-   (ident [this props]
-       [:month/month-id props])
-   Object
-   (render [this]
-      (let [month-id (om/props this)]
-         (dom/div #js {:className "month-header"}
-            (dom/button #js {:className "change-month"
+    (defui Month-header
+       static om/IQuery
+      (query [this]
+         '[:month/month-id])
+       static om/Ident
+       (ident [this props]
+           [:month/month-id props])
+       Object
+       (render [this]
+          (let [month-id (om/props this)]
+             (dom/div #js {:className "month-header"}
+                (dom/button #js {:className "change-month"
+                                 :onClick
+                                    (fn [e] (om/transact! reconciler '[(month/previous)]))}
+                   (dom/i #js {:className "fa fa-chevron-left fa-2x"}))
+                (dom/span #js {:className "month-year"}
+                   (cf/unparse (cf/formatter "MMMM YYYY") (t/date-time month-id)))
+                (dom/button #js {:className "change-month"
+                                 :onClick
+                                    (fn [e] (om/transact! reconciler '[(month/next)]))}
+                   (dom/i #js {:className "fa fa-chevron-right fa-2x"}))))))
 
-                 :onClick
-                    (fn [e] (om/transact! reconciler '[(month/previous)]))}
-   (dom/i #js {:className "fa fa-chevron-left fa-2x"}))
-(dom/span #js {:className "month-year"}
-   (cf/unparse (cf/formatter "MMMM YYYY") (t/date-time month-id)))
-(dom/button #js {:className "change-month"
+    (def month-header (om/factory Month-header))
 
-              :onClick
-                 (fn [e] (om/transact! reconciler '[(month/next)]))}
-(dom/i #js {:className "fa fa-chevron-right fa-2x"}))))))
-
-(def month-header (om/factory Month-header))
-
-\#+END<sub>SRC</sub>                                                                                                                                                    Here, the interesting parts are the use of om/factory, which creates a factory function needed to actually instantiate the compontents, and
 the contents of the #js reader macro. #js allows the introduction of javascript into your clojurescript program. Here the classNames are inserted
 and the click handlers are set up. Note that each click handler calls the mutate functions from above using om/transact!. This creates transactions
 to the application state. If you bring up the console when running the applicaiton program, you can see the transaction IDs in the console each
