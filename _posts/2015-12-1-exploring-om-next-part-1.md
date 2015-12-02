@@ -1,7 +1,7 @@
 ---
-    layout: post
-    title: Exploring Om.next Part 1
-    ---
+layout: post
+title: Exploring Om.next Part 1
+---
 
 At the 2014 clojure/conj, the very first talk was about data driven applications, both back end and front end. I decided to explore clojurescript, Om and
 the data driven application idea by building a simple front end application in [Om](https://github.com/omcljs/om). It was really interesting, and I realized the claims about the flexibility
@@ -12,7 +12,7 @@ This year, I spent six months in the Galvanize Full Stack program, and I gained 
 Facebook released Relay. I really didn't have time to get into it since I needed to get a project done, but I found the idea of using a query language
 interface between client and server really interesting. After graduation, I restarted a project that had been put aside when I was in school. I also wanted
 to refresh my clojure skills after six months of mainly JavaScript. Well, I found Dave Nolan's alphas of
-[[<https://github.com/omcljs/om/wiki/Quick-Start>-(om.next)[om.next]], and started playing with it.
+[om.next](https://github.com/omcljs/om/wiki/Quick-Start-(om.next)), and started playing with it.
 
 Here is a video showing this simple application.
 
@@ -140,65 +140,63 @@ ultimately returns a list of weeks, each containing a list of days. Each day has
 
 The ONLY way the app state is updated in an om.next application is a mutate function. The mutate functions can be triggered by user clicks as
 seen here, or from data received by a remote. Here are my mutate functions.
-\\#+BEIGN<sub>SRC</sub>
-(defn add-assignment-to-calendar [state date assignee]
-  (update state :days/by-date assoc date [:person/by-id assignee]))
 
-(defn remove-date-from-days [days date]
-  (dissoc days date))
+    (defn add-assignment-to-calendar [state date assignee]
+      (update state :days/by-date assoc date [:person/by-id assignee]))
 
-(defn release-day [state date]
-  (update state :days/by-date remove-date-from-days date))
 
-(defn next-month [current-month-start]
-  "given a date-time, generate the date-time one month later"
-    (t/plus current-month-start (t/months 1)))
-(defn last-month [current-month-start]
-  "given a date-time, generate the date-time one month earlier"
-    (t/minus current-month-start (t/months 1)))
+    (defn remove-date-from-days [days date]
+      (dissoc days date))
 
-(defmulti mutate om/dispatch)
+    (defn release-day [state date]
+      (update state :days/by-date remove-date-from-days date))
 
-(defmethod mutate 'day/change-state
-  [{:keys [state]} \_ {:keys [date] :as params}]
-    (let [st @state]
-      (if-let [day-assignee (get-in st [:days/by-date (str date)])]
-         (do
-            (if (= (second day-assignee) (:current-user st))  ; the date is assigned
-               {:value {:days/by-date date}                    ; it is assigned to the current user - so release
+    (defn next-month [current-month-start]
+      "given a date-time, generate the date-time one month later"
+        (t/plus current-month-start (t/months 1)))
+    (defn last-month [current-month-start]
+      "given a date-time, generate the date-time one month earlier"
+        (t/minus current-month-start (t/months 1)))
 
- :action
-    (fn []
-       (swap! state release-day (str date)))}
-{:value {:error "Cannot release someone else's day"}})) ; the date is assigned to someone else - user error
-   (do  {:value {:days/by-date date} ; the date is not assigned - so assign
 
-:action
-   (fn []
-      (swap! state add-assignment-to-calendar (str date) (:current-user st)))}))))
+    (defmulti mutate om/dispatch)
 
-(defmethod mutate 'month/next
-  [{:keys [state]} \_ \_]
-    (let [st @state
-          new-month (next-month (:month/month-id st))
-          month (t/month new-month)
-          year (t/year new-month)]
-            {:value  {:month/month-id (date-key new-month)}
+    (defmethod mutate 'day/change-state
+      [{:keys [state]} _ {:keys [date] :as params}]
+        (let [st @state]
+          (if-let [day-assignee (get-in st [:days/by-date (str date)])]
+             (do
+                (if (= (second day-assignee) (:current-user st))  ; the date is assigned
+                   {:value {:days/by-date date}                    ; it is assigned to the current user - so release
+                    :action
+                       (fn []
+                          (swap! state release-day (str date)))}
+                   {:value {:error "Cannot release someone else's day"}})) ; the date is assigned to someone else - user error
+                      (do  {:value {:days/by-date date} ; the date is not assigned - so assign
+                    :action
+                       (fn []
+                          (swap! state add-assignment-to-calendar (str date) (:current-user st)))}))))
 
-:action (fn []
-            (swap! state assoc :month/month-id new-month :month (six-weeks-containing-month year month)))}))
+    (defmethod mutate 'month/next
+      [{:keys [state]} _ _]
+        (let [st @state
+              new-month (next-month (:month/month-id st))
+              month (t/month new-month)
+              year (t/year new-month)]
+                {:value  {:month/month-id (date-key new-month)}
+                 :action (fn []
+                             (swap! state assoc :month/month-id new-month :month (six-weeks-containing-month year month)))}))
 
-(defmethod mutate 'month/previous
-  [{:keys [state]} \_ \_]
-    (let [st @state
-            new-month (last-month (:month/month-id st))
-            month (t/month new-month)
-            year (t/year new-month)]
-              {:value  {:month/month-id (date-key new-month)}
+    (defmethod mutate 'month/previous
+      [{:keys [state]} _ _]
+        (let [st @state
+                new-month (last-month (:month/month-id st))
+                month (t/month new-month)
+                year (t/year new-month)]
+                  {:value  {:month/month-id (date-key new-month)}
+                  :action (fn []
+                              (swap! state assoc :month/month-id new-month :month (six-weeks-containing-month year month)))}))
 
-              :action (fn []
-                          (swap! state assoc :month/month-id new-month :month (six-weeks-containing-month year month)))}))
-\\#+END<sub>SRC</sub>
 The mutation functions take the same arguments as the read functions, but any data passed in will come in params. Mutation functions
 return a value containing the read needed to update the UI in :value and the function to execute to actually update the state in
 :action. After the mutate function returns, om.next will call the function in :action to update the app state.
